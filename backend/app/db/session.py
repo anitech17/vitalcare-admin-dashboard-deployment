@@ -1,37 +1,50 @@
 
+import psycopg
+from databricks.sdk import WorkspaceClient
 from sqlalchemy import create_engine, text
 from sqlalchemy.orm import sessionmaker
 
 from app.core.config import settings
 
 
+# Databricks SDK client for generating fresh OAuth tokens
+_w = WorkspaceClient()
+
+
+def _create_dbapi_connection():
+    """Create a psycopg connection with a fresh OAuth token.
+
+    OAuth tokens expire after 1 hour. By generating a fresh token for every
+    new physical connection, the pool always has valid credentials.
+    pool_pre_ping ensures stale connections are recycled.
+    """
+    if not settings.endpoint_name:
+        raise RuntimeError("ENDPOINT_NAME is not configured")
+    if not settings.pg_host:
+        raise RuntimeError("PGHOST is not configured")
+    if not settings.pg_user:
+        raise RuntimeError("PGUSER is not configured")
+
+    credential = _w.postgres.generate_database_credential(
+        endpoint=settings.endpoint_name
+    )
+    return psycopg.connect(
+        host=settings.pg_host,
+        port=settings.pg_port,
+        dbname=settings.pg_database,
+        user=settings.pg_user,
+        password=credential.token,
+        sslmode=settings.pg_sslmode,
+    )
+
+
 def create_database_engine():
-    database_url = settings.database_url
-
-    if not database_url:
-        raise RuntimeError("DATABASE_URL is not configured")
-
-    if database_url.startswith("postgresql://"):
-        database_url = database_url.replace(
-            "postgresql://", "postgresql+psycopg://", 1
-        )
-    elif database_url.startswith("postgres://"):
-        database_url = database_url.replace(
-            "postgres://", "postgresql+psycopg://", 1
-        )
-
-    if not settings.lakebase_access_token:
-        raise RuntimeError("Lakebase credentials are not configured")
-
     return create_engine(
-        database_url,
+        "postgresql+psycopg://",
+        creator=_create_dbapi_connection,
         pool_pre_ping=True,
         pool_size=5,
         max_overflow=5,
-        connect_args={
-            "sslmode": "require",
-            "password": settings.lakebase_access_token,
-        },
     )
 
 
