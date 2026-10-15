@@ -5,6 +5,10 @@ from sqlalchemy.exc import SQLAlchemyError
 
 from app.db.session import get_engine
 
+import logging
+
+logger = logging.getLogger(__name__)
+
 router = APIRouter(
     prefix="/api/dashboard",
     tags=["Dashboard Routing"],
@@ -25,6 +29,7 @@ def get_routing_performance():
             return [dict(row) for row in result]
 
     except SQLAlchemyError:
+        logger.exception("Failed to retrieve routing performance")
         raise HTTPException(
             status_code=500,
             detail="Unable to retrieve routing performance",
