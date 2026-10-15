@@ -1,0 +1,29 @@
+# Environment variables and secrets
+.env
+.env.*
+!.env.example
+**/.env
+**/.env.*
+!**/.env.example
+
+# Python
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+.pytest_cache/
+
+# Node.js and frontend builds
+node_modules/
+dist/
+**/node_modules/
+**/dist/
+
+# Git metadata from the two source repositories
+backend/.git/
+frontend/.git/
+
+# OS and editor files
+.DS_Store
+.vscode/
+.idea/
